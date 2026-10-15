@@ -1,0 +1,17 @@
+# Node dependencies
+node_modules/
+
+# Python dependencies
+__pycache__/
+*.pyc
+
+# Machine Learning model weights (these are huge!)
+*.onnx
+
+# Environment files
+.env
+
+# Logs and OS files
+*.log
+.DS_Store
+Thumbs.db

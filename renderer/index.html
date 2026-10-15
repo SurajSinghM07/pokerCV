@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>pokerCV — Real-Time Equity Tracker</title>
+  <meta name="description" content="Real-time poker HUD with YOLOv8 card detection and Monte Carlo equity simulation">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  
+  <header id="title-bar">
+    <div class="title-bar-left">
+      <div class="app-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <span class="app-title">pokerCV</span>
+      <span class="app-version" id="app-version">v1.0</span>
+    </div>
+    <div class="title-bar-center">
+      <div class="connection-status" id="connection-status">
+        <span class="status-dot"></span>
+        <span class="status-text">Connecting...</span>
+      </div>
+    </div>
+    <div class="title-bar-right">
+      <button class="title-btn" id="btn-minimize" title="Minimize">
+        <svg width="12" height="12" viewBox="0 0 12 12"><rect y="5" width="12" height="2" fill="currentColor"/></svg>
+      </button>
+      <button class="title-btn" id="btn-maximize" title="Maximize">
+        <svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+      </button>
+      <button class="title-btn title-btn-close" id="btn-close" title="Close">
+        <svg width="12" height="12" viewBox="0 0 12 12"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5"/></svg>
+      </button>
+    </div>
+  </header>
+
+  
+  <main id="app-container">
+    
+    <section id="video-section">
+      <canvas id="video-canvas"></canvas>
+      <div id="video-overlay">
+        <div id="no-feed-message">
+          <div class="pulse-ring"></div>
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.5">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+          <p>Waiting for camera feed...</p>
+          <span class="hint">Ensure the Python backend is running</span>
+        </div>
+      </div>
+      
+      <div id="fps-badge">
+        <span id="fps-value">0</span> FPS
+      </div>
+    </section>
+
+    
+    <aside id="sidebar">
+      
+      <div class="panel" id="equity-panel">
+        <div class="panel-header">
+          <h2>EQUITY</h2>
+          <div class="computing-indicator" id="computing-indicator" style="display:none">
+            <div class="spinner"></div>
+          </div>
+        </div>
+        <div class="equity-content" id="equity-content">
+          <div class="equity-waiting" id="equity-waiting">
+            <p>Waiting for hole cards...</p>
+          </div>
+          <div class="equity-data" id="equity-data" style="display:none">
+            
+            <div class="equity-row">
+              <span class="equity-label">WIN</span>
+              <div class="equity-bar-track">
+                <div class="equity-bar equity-bar-win" id="bar-win" style="width:0%"></div>
+              </div>
+              <span class="equity-value equity-value-win" id="val-win">0.0%</span>
+            </div>
+            
+            <div class="equity-row">
+              <span class="equity-label">TIE</span>
+              <div class="equity-bar-track">
+                <div class="equity-bar equity-bar-tie" id="bar-tie" style="width:0%"></div>
+              </div>
+              <span class="equity-value equity-value-tie" id="val-tie">0.0%</span>
+            </div>
+            
+            <div class="equity-row">
+              <span class="equity-label">LOSE</span>
+              <div class="equity-bar-track">
+                <div class="equity-bar equity-bar-lose" id="bar-lose" style="width:0%"></div>
+              </div>
+              <span class="equity-value equity-value-lose" id="val-lose">0.0%</span>
+            </div>
+            
+            <div class="equity-stacked-bar" id="stacked-bar">
+              <div class="stacked-win" id="stacked-win"></div>
+              <div class="stacked-tie" id="stacked-tie"></div>
+              <div class="stacked-lose" id="stacked-lose"></div>
+            </div>
+            
+            <div class="equity-meta">
+              <span id="hand-rank" class="hand-rank"></span>
+              <span id="sim-info" class="sim-info"></span>
+            </div>
+            
+            <div class="action-recommendation" id="action-rec" style="display:none">
+              <span class="action-label">ADVICE</span>
+              <div class="action-badge" id="action-badge">CALL</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      
+      <div class="panel" id="state-panel">
+        <div class="panel-header">
+          <h2>GAME STATE</h2>
+          <span class="phase-badge" id="phase-badge">WAITING</span>
+        </div>
+        <div class="state-content">
+          
+          <div class="card-zone" id="zone-player">
+            <div class="zone-label">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              YOUR HAND
+            </div>
+            <div class="card-chips" id="player-cards">
+              <span class="card-placeholder">—</span>
+            </div>
+          </div>
+          
+          <div class="card-zone" id="zone-community">
+            <div class="zone-label">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+              COMMUNITY
+            </div>
+            <div class="card-chips" id="community-cards">
+              <span class="card-placeholder">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      
+      <div class="panel panel-collapsible" id="settings-panel">
+        <div class="panel-header panel-toggle" id="settings-toggle">
+          <h2>SETTINGS</h2>
+          <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="panel-body" id="settings-body" style="display:none">
+          
+          <div class="setting-row">
+            <label for="setting-camera">Camera Feed</label>
+            <div class="setting-control">
+              <label class="switch">
+                <input type="checkbox" id="setting-camera" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <label for="setting-camera-device">Camera Device</label>
+            <div class="setting-control">
+              <select id="setting-camera-device"></select>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <label for="setting-confidence">Detection Confidence</label>
+            <div class="setting-control">
+              <input type="range" id="setting-confidence" min="0.1" max="0.95" step="0.05" value="0.5">
+              <span class="setting-value" id="val-confidence">0.50</span>
+            </div>
+          </div>
+          
+          <div class="setting-row">
+            <label for="setting-debounce">Debounce Frames</label>
+            <div class="setting-control">
+              <input type="range" id="setting-debounce" min="3" max="30" step="1" value="15">
+              <span class="setting-value" id="val-debounce">15</span>
+            </div>
+          </div>
+          
+          <div class="setting-row">
+            <label for="setting-sims">MC Simulations</label>
+            <div class="setting-control">
+              <input type="range" id="setting-sims" min="1000" max="50000" step="1000" value="10000">
+              <span class="setting-value" id="val-sims">10K</span>
+            </div>
+          </div>
+          
+          <div class="setting-actions">
+            <button class="btn btn-secondary" id="btn-reset">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+              Reset State
+            </button>
+            <button class="btn btn-secondary" id="btn-restart-python">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Restart Backend
+            </button>
+          </div>
+        </div>
+      </div>
+
+      
+      <div class="panel panel-collapsible" id="console-panel">
+        <div class="panel-header panel-toggle" id="console-toggle">
+          <h2>CONSOLE</h2>
+          <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="panel-body" id="console-body" style="display:none">
+          <div class="console-output" id="console-output"></div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

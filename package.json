@@ -1,0 +1,38 @@
+{
+  "name": "pokerCV",
+  "version": "1.0.0",
+  "description": "Real-Time pokerCV with YOLOv8 Card Detection & Monte Carlo Equity",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "repair-electron": "node scripts/repair-electron-install.js",
+    "postinstall": "node scripts/repair-electron-install.js"
+  },
+  "keywords": [
+    "poker",
+    "hud",
+    "yolov8",
+    "opencv",
+    "electron"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.pokerhud.app",
+    "productName": "pokerCV",
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "backend/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    }
+  }
+}
